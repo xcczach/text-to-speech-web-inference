@@ -6,3 +6,4 @@ TTS
 torch
 soundfile
 huggingface_hub
+torchaudio

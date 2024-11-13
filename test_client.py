@@ -1,5 +1,4 @@
 import requests
-import numpy as np
 import soundfile as sf
 import io
 
@@ -16,9 +15,7 @@ if response.status_code == 200:
         buffer.write(chunk)
 
     buffer.seek(0)
-    audio_data = np.load(buffer)
-
-    sample_rate = 24000
+    audio_data, sample_rate = sf.read(buffer)
     sf.write("output_audio.wav", audio_data, sample_rate)
 
     print("Audio saved at output_audio.wav")

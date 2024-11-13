@@ -5,6 +5,7 @@ import torch
 import io
 import numpy as np
 import argparse
+import torchaudio
 
 model = None
 config = None
@@ -12,15 +13,17 @@ config = None
 async def inference(request: Request) -> StreamingResponse:
     data = await request.json()
     text = data["text"]
-    result_arr = model.synthesize(
+    result_dict = model.synthesize(
         text,
         config,
         speaker_wav="en_sample.wav",
         language="en",
         gpt_cond_len=3
-    )["wav"]
+    )
+    print(result_dict.keys())
+    result_arr = result_dict["wav"]
     result = io.BytesIO()
-    np.save(result, result_arr)
+    torchaudio.save(result, torch.tensor(result_arr).unsqueeze(0), 24000, format="wav")
     result.seek(0)
     return StreamingResponse(result, media_type="application/octet-stream")
 
