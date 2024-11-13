@@ -1,5 +1,5 @@
 > process_log.txt
-port=9234
+port=${1:-"9234"}
 api_name=tts
 hangup_timeout_sec=900
 hangup_interval_sec=60

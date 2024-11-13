@@ -3,21 +3,38 @@ from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 import torch
 import io
-import numpy as np
+import re
 import argparse
 import torchaudio
 
 model = None
 config = None
 
+lang_to_sample_path = {
+    "en": "en_sample.wav",
+    "zh": "zh-cn-sample.wav",
+    "ja": "ja-sample.wav",
+}
+
+def detect_language(text):
+    if re.search(r'[a-zA-Z]', text):
+        return "en"
+    elif re.search(r'[\u4e00-\u9fff]', text):
+        return "zh"
+    elif re.search(r'[\u3040-\u30ff]', text):
+        return "ja"
+    else:
+        return "unknown"
+
 async def inference(request: Request) -> StreamingResponse:
     data = await request.json()
     text = data["text"]
+    lang = detect_language(text)
     result_dict = model.synthesize(
         text,
         config,
-        speaker_wav="en_sample.wav",
-        language="en",
+        speaker_wav=lang_to_sample_path[lang],
+        language=lang,
         gpt_cond_len=3
     )
     print(result_dict.keys())
