@@ -7,3 +7,4 @@ torch
 soundfile
 huggingface_hub
 torchaudio
+setproctitle==1.3.4

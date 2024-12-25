@@ -6,6 +6,7 @@ import io
 import re
 import argparse
 import torchaudio
+import setproctitle
 
 model = None
 config = None
@@ -61,6 +62,7 @@ def hangup():
 
 
 if  __name__ == "__main__":
+    setproctitle.setproctitle("tts-web-inference")
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=9234)
     parser.add_argument("--api-name", type=str, default="tts")

@@ -166,3 +166,4 @@ ckpts/*
 !ckpts/download.py
 output_audio.wav
 process_log.txt
+nohup.out
