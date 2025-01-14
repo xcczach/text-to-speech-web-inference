@@ -17,7 +17,7 @@ python ckpts/download.py
 
 Start the server and wait for a few seconds for the server to be ready:
 ```bash
-bash run.sh
+bash run.sh <port>
 ```
 You can customize some parameters in `run.sh`.
 

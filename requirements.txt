@@ -1,4 +1,4 @@
-ml_web_inference
+ml_web_inference==0.1.2
 fastapi==0.110
 spacy[ja]==3.7.5
 transformers==4.33.0
