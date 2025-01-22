@@ -1,4 +1,4 @@
-from ml_web_inference import expose, Request, StreamingResponse, get_proper_device
+from ml_web_inference import expose, Request, StreamingResponse
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 import torch
@@ -17,15 +17,17 @@ lang_to_sample_path = {
     "ja": "ja-sample.wav",
 }
 
+
 def detect_language(text):
-    if re.search(r'[a-zA-Z]', text):
+    if re.search(r"[a-zA-Z]", text):
         return "en"
-    elif re.search(r'[\u4e00-\u9fff]', text):
+    elif re.search(r"[\u4e00-\u9fff]", text):
         return "zh"
-    elif re.search(r'[\u3040-\u30ff]', text):
+    elif re.search(r"[\u3040-\u30ff]", text):
         return "ja"
     else:
         return "unknown"
+
 
 async def inference(request: Request) -> StreamingResponse:
     data = await request.json()
@@ -36,7 +38,7 @@ async def inference(request: Request) -> StreamingResponse:
         config,
         speaker_wav=lang_to_sample_path[lang],
         language=lang,
-        gpt_cond_len=3
+        gpt_cond_len=3,
     )
     print(result_dict.keys())
     result_arr = result_dict["wav"]
@@ -53,7 +55,8 @@ def init():
         config.load_json("ckpts/xttsv2/config.json")
     model = Xtts.init_from_config(config)
     model.load_checkpoint(config, checkpoint_dir="ckpts/xttsv2", eval=True)
-    model.to(get_proper_device(2000))
+    model.to("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def hangup():
     global model
@@ -61,7 +64,7 @@ def hangup():
     torch.cuda.empty_cache()
 
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
     setproctitle.setproctitle("tts-web-inference")
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=9234)
