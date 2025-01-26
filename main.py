@@ -18,32 +18,83 @@ lang_to_sample_path = {
 }
 
 
-def detect_language(text):
-    if re.search(r"[a-zA-Z]", text):
-        return "en"
-    elif re.search(r"[\u4e00-\u9fff]", text):
-        return "zh"
-    elif re.search(r"[\u3040-\u30ff]", text):
-        return "ja"
-    else:
-        return "unknown"
+import re
+
+
+def _detect_language(text):
+    counts = {
+        "en": len(re.findall(r"[a-zA-Z]", text)),
+        "zh": len(re.findall(r"[\u4e00-\u9fff]", text)),
+        "ja": len(re.findall(r"[\u3040-\u30ff]", text)),
+    }
+    max_lang = max(counts, key=counts.get)
+    return max_lang if counts[max_lang] > 0 else "en"
+
+
+def _unit_len(text: str):
+    # count the number of characters of Chinese and Japanese, and the number of words of English; add them together
+    return (
+        len(re.findall(r"[\u4e00-\u9fff]", text))
+        + len(re.findall(r"[\u3040-\u30ff]", text))
+        + len(text.split())
+    )
+
+
+def _merge_short_sentences(sentences: list, max_units: int):
+    merged_segments = []
+    temp_segment = ""
+    for i in range(0, len(sentences)):
+        if _unit_len(temp_segment) + _unit_len(sentences[i]) <= max_units:
+            temp_segment += sentences[i]
+        else:
+            if temp_segment:
+                merged_segments.append(temp_segment)
+            temp_segment = sentences[i]
+    if temp_segment:
+        merged_segments.append(temp_segment)
+    return merged_segments
+
+
+def _split_by_punctuation(text: str, puncs: str):
+    sentences = re.split(rf"(?<=[{puncs}])", text)
+    return [s.strip() for s in sentences if s.strip()]
+
+
+def _split_text_for_tts(text: str, max_units: int):
+    # split text into segments with 。！？….!?
+    sentences = _split_by_punctuation(text, "。！？….!?")
+    # merge short sentences until the segment is less than max_units
+    merged_segments = _merge_short_sentences(sentences, max_units)
+    # split the segment with ,，:：;；、 if sentence is longer than max_units
+    splited_segments = []
+    for segment in merged_segments:
+        if _unit_len(segment) > max_units:
+            new_segments = _split_by_punctuation(segment, ",，:：;；、")
+            splited_segments.extend(_merge_short_sentences(new_segments, max_units))
+        else:
+            splited_segments.append(segment)
+    return splited_segments
 
 
 async def inference(request: Request) -> StreamingResponse:
     data = await request.json()
     text = data["text"]
-    lang = detect_language(text)
-    result_dict = model.synthesize(
-        text,
-        config,
-        speaker_wav=lang_to_sample_path[lang],
-        language=lang,
-        gpt_cond_len=3,
-    )
-    print(result_dict.keys())
-    result_arr = result_dict["wav"]
+    text_segments = _split_text_for_tts(text, 20)
+    result_arrs = []
+    for segment in text_segments:
+        lang = _detect_language(segment)
+        result_dict = model.synthesize(
+            segment,
+            config,
+            speaker_wav=lang_to_sample_path[lang],
+            language=lang,
+            gpt_cond_len=3,
+        )
+        result_arr = torch.tensor(result_dict["wav"])
+        result_arrs.append(result_arr)
+    result_arr = torch.cat(result_arrs)
     result = io.BytesIO()
-    torchaudio.save(result, torch.tensor(result_arr).unsqueeze(0), 24000, format="wav")
+    torchaudio.save(result, result_arr.unsqueeze(0), 24000, format="wav")
     result.seek(0)
     return StreamingResponse(result, media_type="application/octet-stream")
 
