@@ -11,7 +11,7 @@ import setproctitle
 model = None
 config = None
 
-lang_to_sample_path = {
+_lang_to_sample_path = {
     "en": "en_sample.wav",
     "zh": "zh-cn-sample.wav",
     "ja": "ja-sample.wav",
@@ -86,7 +86,7 @@ async def inference(request: Request) -> StreamingResponse:
         result_dict = model.synthesize(
             segment,
             config,
-            speaker_wav=lang_to_sample_path[lang],
+            speaker_wav=_lang_to_sample_path[lang],
             language=lang,
             gpt_cond_len=3,
         )
